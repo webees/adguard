@@ -17,15 +17,14 @@ EXPOSE 53/tcp 53/udp \
        5443/tcp 5443/udp \
        6060/tcp
 
-WORKDIR /opt/adguardhome/work
+WORKDIR /
 
 ARG SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.2.29/supercronic-linux-amd64 \
     OVERMIND_URL=https://github.com/DarthSim/overmind/releases/download/v2.4.0/overmind-v2.4.0-linux-amd64.gz
 
 ENV TZ="Asia/Shanghai" \
 
-    OVERMIND_CAN_DIE=crontab \
-    OVERMIND_PROCFILE=/Procfile \
+    OVERMIND_CAN_DIE=supercronic \
 
     SMTP_HOST=smtp.gmail.com \
     SMTP_PORT=587 \
@@ -34,20 +33,18 @@ ENV TZ="Asia/Shanghai" \
     SMTP_FROM=88888888@gmail.com \
     SMTP_TO= \
 
-    RESTIC_REPOSITORY=s3://88888888.r2.cloudflarestorage.com/vaultwarden \
+    RESTIC_REPOSITORY=s3://88888888.r2.cloudflarestorage.com/adguard \
     RESTIC_PASSWORD= \
     AWS_ACCESS_KEY_ID= \
     AWS_SECRET_ACCESS_KEY=
 
-COPY config/crontab \
-     config/Procfile \
-     config/Caddyfile \
+COPY scripts/overmind.sh \
+     scripts/supercronic.sh \
      scripts/restic.sh \
      /
 
 RUN apk add --no-cache \
         curl \
-        caddy \
         restic \
         ca-certificates \
         openssl \
@@ -58,8 +55,8 @@ RUN apk add --no-cache \
         tmux \
         msmtp \
         mailx \
-
         && rm -rf /var/cache/apk/* \
+
         && curl -fsSL "$SUPERCRONIC_URL" -o /usr/local/bin/supercronic \
         && curl -fsSL "$OVERMIND_URL" | gunzip -c - > /usr/local/bin/overmind \
 
@@ -68,6 +65,9 @@ RUN apk add --no-cache \
 
         && chmod +x /usr/local/bin/supercronic \
         && chmod +x /usr/local/bin/overmind \
+
+        && chmod +x /overmind.sh \
+        && chmod +x /supercronic.sh \
         && chmod +x /restic.sh \
 
         && mkdir -p /data/conf \
@@ -77,5 +77,5 @@ RUN apk add --no-cache \
         && ln -s /data/conf /opt/adguardhome/conf \
         && ln -s /data/work /opt/adguardhome/work
 
-ENTRYPOINT ["overmind"]
-CMD ["start"]
+ENTRYPOINT ["/overmind.sh"]
+CMD ["-"]
