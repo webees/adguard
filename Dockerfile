@@ -1,4 +1,4 @@
-FROM adguard/adguardhome:v0.108.0-b.53
+FROM adguard/adguardhome:v0.108.0-b.71
 
 # 53     : TCP, UDP : DNS
 # 67     :      UDP : DHCP (server)
