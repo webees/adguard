@@ -1,4 +1,3 @@
-```yaml
 name: 🧹 Clean GHCR SHA256 Images
 
 on:
@@ -71,4 +70,3 @@ jobs:
               echo "✅ Successfully deleted version ID: $vid"
             fi
           done
-```
