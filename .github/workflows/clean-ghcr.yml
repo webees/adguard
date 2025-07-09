@@ -15,11 +15,13 @@ jobs:
     steps:
       - name: 🧾 Delete SHA256-tagged GHCR images
         env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GH_TOKEN: ${{ github.token }}  # 使用默认 GITHUB_TOKEN
           REPO_NAME: ${{ github.repository }}
+          PACKAGE_NAME: adguard  # 明确指定包名
         run: |
-          # 提取仓库名称（从 owner/repo 中获取 repo 部分）
-          PACKAGE_NAME=$(echo $REPO_NAME | cut -d'/' -f2)
+          # 调试：输出环境变量
+          echo "🔍 REPO_NAME: $REPO_NAME"
+          echo "🔍 PACKAGE_NAME: $PACKAGE_NAME"
 
           # 获取所有镜像版本并调试输出
           echo "🔍 Fetching all package versions for $PACKAGE_NAME..."
