@@ -21,11 +21,25 @@ jobs:
           # 提取仓库名称（从 owner/repo 中获取 repo 部分）
           PACKAGE_NAME=$(echo $REPO_NAME | cut -d'/' -f2)
 
-          # 获取所有 SHA256 标签的镜像版本 ID
-          VERSIONS=$(gh api -H "Accept: application/vnd.github+json" \
+          # 获取所有镜像版本并调试输出
+          echo "🔍 Fetching all package versions for $PACKAGE_NAME..."
+          VERSIONS_JSON=$(gh api -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
             /user/packages/container/$PACKAGE_NAME/versions \
-            --paginate | jq -r '.[] | select(.metadata.container.tags[] | startswith("sha256:")) | .id')
+            --paginate)
+
+          # 检查 JSON 数据是否为空
+          if [ -z "$VERSIONS_JSON" ]; then
+            echo "❌ No versions found or API request failed."
+            exit 1
+          fi
+
+          # 输出原始 JSON 数据以便调试
+          echo "📜 Raw versions JSON:"
+          echo "$VERSIONS_JSON" | jq .
+
+          # 过滤 SHA256 标签的版本 ID
+          VERSIONS=$(echo "$VERSIONS_JSON" | jq -r '.[] | select(.metadata.container.tags | any(. | startswith("sha256:"))) | .id')
 
           # 检查是否有 SHA256 标签的版本
           if [ -z "$VERSIONS" ]; then
