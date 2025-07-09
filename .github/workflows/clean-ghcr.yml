@@ -1,13 +1,13 @@
 name: 🧹 Clean GHCR SHA256 Images
 
 on:
-  workflow_dispatch:  # 支持手动触发
+  workflow_dispatch:
   schedule:
-    - cron: '0 3 * * *'  # 每天 UTC 3 点执行（北京时间 11 点）
+    - cron: '0 3 * * *'
 
 permissions:
-  packages: write  # 需要写权限以删除镜像
-  contents: read   # 需要读权限以访问仓库信息
+  packages: write
+  contents: read
 
 jobs:
   clean:
@@ -15,58 +15,47 @@ jobs:
     steps:
       - name: 🧾 Delete SHA256-named GHCR images
         env:
-          GH_TOKEN: ${{ github.token }}  # 使用默认 GITHUB_TOKEN
+          GH_TOKEN: ${{ github.token }}
           REPO_NAME: ${{ github.repository }}
-          PACKAGE_NAME: adguard  # 明确指定包名
+          PACKAGE_NAME: adguard
         run: |
-          # 调试：输出环境变量
-          echo "🔍 REPO_NAME: $REPO_NAME"
-          echo "🔍 PACKAGE_NAME: $PACKAGE_NAME"
+          echo "📦 Repo: $REPO_NAME"
+          echo "📦 Package: $PACKAGE_NAME"
 
-          # 获取所有镜像版本并调试输出
-          echo "🔍 Fetching all package versions for $PACKAGE_NAME..."
+          echo "🔍 Fetching versions..."
           VERSIONS_JSON=$(gh api -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
             /user/packages/container/$PACKAGE_NAME/versions \
             --paginate)
 
-          # 检查 JSON 数据是否为空
           if [ -z "$VERSIONS_JSON" ]; then
-            echo "❌ No versions found or API request failed."
+            echo "❌ No versions found."
             exit 1
           fi
 
-          # 输出原始 JSON 数据以便调试
-          echo "📜 Raw versions JSON:"
-          echo "$VERSIONS_JSON" | jq .
-
-          # 过滤 name 字段包含 sha256: 的版本 ID，按 created_at 倒序排序
           VERSIONS=$(echo "$VERSIONS_JSON" | jq -r 'sort_by(.created_at) | reverse | .[] | select(.name | startswith("sha256:")) | .id')
 
-          # 检查是否有 SHA256 名称的版本
           if [ -z "$VERSIONS" ]; then
-            echo "✅ No SHA256-named versions found."
+            echo "✅ No SHA256 versions."
             exit 0
           fi
 
-          # 输出过滤出的版本 ID 以便调试
-          echo "📋 Found SHA256-named version IDs:"
-          echo "$VERSIONS" | while read -r vid; do echo "  - $vid"; done
+          echo "🧹 Found versions:"
+          echo "$VERSIONS" | while read -r vid; do echo "  • $vid"; done
 
-          # 遍历并删除每个 SHA256 名称的版本，捕获 HTTP 400 错误并跳过
           for vid in $VERSIONS; do
-            echo "🗑️ Attempting to delete version ID: $vid"
+            echo "🗑️ Deleting ID: $vid"
             if ! gh api -X DELETE \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer $GH_TOKEN" \
               /user/packages/container/$PACKAGE_NAME/versions/$vid 2> error.log; then
               if grep -q "You cannot delete the last tagged version" error.log; then
-                echo "⚠️ Skipped version ID: $vid (last tagged version)"
+                echo "⚠️ Skipped (last tagged): $vid"
               else
-                echo "❌ Failed to delete version ID: $vid (unexpected error)"
+                echo "❌ Error deleting $vid"
                 cat error.log
               fi
             else
-              echo "✅ Successfully deleted version ID: $vid"
+              echo "✅ Deleted: $vid"
             fi
           done
