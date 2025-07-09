@@ -17,15 +17,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO_NAME: ${{ github.repository }}
-          PACKAGE_NAME: adguard
         run: |
+          PACKAGE=$(basename "$REPO_NAME")
           echo "📦 Repo: $REPO_NAME"
-          echo "📦 Package: $PACKAGE_NAME"
+          echo "📦 Package: $PACKAGE"
 
           echo "🔍 Fetching versions..."
           VERSIONS_JSON=$(gh api -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
-            /user/packages/container/$PACKAGE_NAME/versions \
+            /user/packages/container/$PACKAGE/versions \
             --paginate)
 
           if [ -z "$VERSIONS_JSON" ]; then
@@ -48,7 +48,7 @@ jobs:
             if ! gh api -X DELETE \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer $GH_TOKEN" \
-              /user/packages/container/$PACKAGE_NAME/versions/$vid 2> error.log; then
+              /user/packages/container/$PACKAGE/versions/$vid 2> error.log; then
               if grep -q "You cannot delete the last tagged version" error.log; then
                 echo "⚠️ Skipped (last tagged): $vid"
               else
