@@ -3,7 +3,11 @@ name: 🧹 Clean GHCR Untagged
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 3 * * *'  # 每天 UTC 3 点执行一次
+    - cron: '0 3 * * *'
+
+permissions:
+  packages: write
+  contents: read
 
 jobs:
   clean:
@@ -11,18 +15,25 @@ jobs:
     steps:
       - name: 🧾 Delete untagged GHCR images
         env:
-          GH_USERNAME: ${{ github.repository_owner }}
-          GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          REPO_NAME: ${{ github.repository }}
         run: |
-          REPO_NAME=$(echo $GH_REPO | cut -d'/' -f2)
+          PACKAGE_NAME=$(echo $REPO_NAME | cut -d'/' -f2)
 
-          # Get all versions
           VERSIONS=$(gh api -H "Accept: application/vnd.github+json" \
-            /user/packages/container/$REPO_NAME/versions \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            /user/packages/container/$PACKAGE_NAME/versions \
             --paginate | jq -r '.[] | select(.metadata.container.tags | length == 0) | .id')
+
+          if [ -z "$VERSIONS" ]; then
+            echo "✅ No untagged versions found."
+            exit 0
+          fi
 
           for vid in $VERSIONS; do
             echo "🗑️ Deleting version ID: $vid"
-            gh api -X DELETE /user/packages/container/$REPO_NAME/versions/$vid
+            gh api -X DELETE \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              /user/packages/container/$PACKAGE_NAME/versions/$vid
           done
