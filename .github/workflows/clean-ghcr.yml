@@ -1,0 +1,28 @@
+name: 🧹 Clean GHCR Untagged
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'  # 每天 UTC 3 点执行一次
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🧾 Delete untagged GHCR images
+        env:
+          GH_USERNAME: ${{ github.repository_owner }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          REPO_NAME=$(echo $GH_REPO | cut -d'/' -f2)
+
+          # Get all versions
+          VERSIONS=$(gh api -H "Accept: application/vnd.github+json" \
+            /user/packages/container/$REPO_NAME/versions \
+            --paginate | jq -r '.[] | select(.metadata.container.tags | length == 0) | .id')
+
+          for vid in $VERSIONS; do
+            echo "🗑️ Deleting version ID: $vid"
+            gh api -X DELETE /user/packages/container/$REPO_NAME/versions/$vid
+          done
