@@ -51,12 +51,17 @@ jobs:
 
           # 遍历并删除每个 SHA256 名称的版本，捕获 HTTP 400 错误并跳过
           for vid in $VERSIONS; do
-            echo "🗑️ Deleting version ID: $vid"
+            echo "🗑️ Attempting to delete version ID: $vid"
             if ! gh api -X DELETE \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer $GH_TOKEN" \
-              /user/packages/container/$PACKAGE_NAME/versions/$vid; then
-              echo "⚠️ Failed to delete version ID: $vid (likely last tagged version, skipping)"
+              /user/packages/container/$PACKAGE_NAME/versions/$vid 2> error.log; then
+              if grep -q "You cannot delete the last tagged version" error.log; then
+                echo "⚠️ Skipped version ID: $vid (last tagged version)"
+              else
+                echo "❌ Failed to delete version ID: $vid (unexpected error)"
+                cat error.log
+              fi
             else
               echo "✅ Successfully deleted version ID: $vid"
             fi
