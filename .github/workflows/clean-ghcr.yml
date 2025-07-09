@@ -1,35 +1,39 @@
-name: 🧹 Clean GHCR Untagged
+name: 🧹 Clean GHCR SHA256 Images
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # 支持手动触发
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '0 3 * * *'  # 每天 UTC 3 点执行（北京时间 11 点）
 
 permissions:
-  packages: write
-  contents: read
+  packages: write  # 需要写权限以删除镜像
+  contents: read   # 需要读权限以访问仓库信息
 
 jobs:
   clean:
     runs-on: ubuntu-latest
     steps:
-      - name: 🧾 Delete untagged GHCR images
+      - name: 🧾 Delete SHA256-tagged GHCR images
         env:
           GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
           REPO_NAME: ${{ github.repository }}
         run: |
+          # 提取仓库名称（从 owner/repo 中获取 repo 部分）
           PACKAGE_NAME=$(echo $REPO_NAME | cut -d'/' -f2)
 
+          # 获取所有 SHA256 标签的镜像版本 ID
           VERSIONS=$(gh api -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
             /user/packages/container/$PACKAGE_NAME/versions \
-            --paginate | jq -r '.[] | select(.metadata.container.tags | length == 0) | .id')
+            --paginate | jq -r '.[] | select(.metadata.container.tags[] | startswith("sha256:")) | .id')
 
+          # 检查是否有 SHA256 标签的版本
           if [ -z "$VERSIONS" ]; then
-            echo "✅ No untagged versions found."
+            echo "✅ No SHA256-tagged versions found."
             exit 0
           fi
 
+          # 遍历并删除每个 SHA256 标签的版本
           for vid in $VERSIONS; do
             echo "🗑️ Deleting version ID: $vid"
             gh api -X DELETE \
