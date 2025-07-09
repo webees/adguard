@@ -13,7 +13,7 @@ jobs:
   clean:
     runs-on: ubuntu-latest
     steps:
-      - name: 🧾 Delete SHA256-tagged GHCR images
+      - name: 🧾 Delete SHA256-named GHCR images
         env:
           GH_TOKEN: ${{ github.token }}  # 使用默认 GITHUB_TOKEN
           REPO_NAME: ${{ github.repository }}
@@ -40,16 +40,16 @@ jobs:
           echo "📜 Raw versions JSON:"
           echo "$VERSIONS_JSON" | jq .
 
-          # 过滤 SHA256 标签的版本 ID
-          VERSIONS=$(echo "$VERSIONS_JSON" | jq -r '.[] | select(.metadata.container.tags | any(. | startswith("sha256:"))) | .id')
+          # 过滤 name 字段包含 sha256: 的版本 ID
+          VERSIONS=$(echo "$VERSIONS_JSON" | jq -r '.[] | select(.name | startswith("sha256:")) | .id')
 
-          # 检查是否有 SHA256 标签的版本
+          # 检查是否有 SHA256 名称的版本
           if [ -z "$VERSIONS" ]; then
-            echo "✅ No SHA256-tagged versions found."
+            echo "✅ No SHA256-named versions found."
             exit 0
           fi
 
-          # 遍历并删除每个 SHA256 标签的版本
+          # 遍历并删除每个 SHA256 名称的版本
           for vid in $VERSIONS; do
             echo "🗑️ Deleting version ID: $vid"
             gh api -X DELETE \
