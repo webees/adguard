@@ -1,3 +1,4 @@
+```yaml
 name: 🧹 Clean GHCR SHA256 Images
 
 on:
@@ -40,14 +41,18 @@ jobs:
           echo "📜 Raw versions JSON:"
           echo "$VERSIONS_JSON" | jq .
 
-          # 过滤 name 字段包含 sha256: 的版本，按 created_at 倒序排序
-          VERSIONS=$(echo "$VERSIONS_JSON" | jq -r '.[] | select(.name | startswith("sha256:")) | .id + "," + .created_at' | sort -t',' -k2 -r | cut -d',' -f1)
+          # 过滤 name 字段包含 sha256: 的版本 ID，按 created_at 倒序排序
+          VERSIONS=$(echo "$VERSIONS_JSON" | jq -r 'sort_by(.created_at) | reverse | .[] | select(.name | startswith("sha256:")) | .id')
 
           # 检查是否有 SHA256 名称的版本
           if [ -z "$VERSIONS" ]; then
             echo "✅ No SHA256-named versions found."
             exit 0
           fi
+
+          # 输出过滤出的版本 ID 以便调试
+          echo "📋 Found SHA256-named version IDs:"
+          echo "$VERSIONS" | while read -r vid; do echo "  - $vid"; done
 
           # 遍历并删除每个 SHA256 名称的版本，捕获 HTTP 400 错误并跳过
           for vid in $VERSIONS; do
@@ -66,3 +71,4 @@ jobs:
               echo "✅ Successfully deleted version ID: $vid"
             fi
           done
+```
