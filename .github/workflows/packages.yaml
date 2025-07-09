@@ -1,7 +1,7 @@
-name: 🐳 Docker Build & Push
+name: 🐳 Build & Push Image
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
   schedule:
     - cron: '25 2 * * *'
   push:
@@ -12,8 +12,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build:
-
+  docker:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -21,47 +20,45 @@ jobs:
       id-token: write
 
     steps:
-      - name: 📥 Checkout
+      - name: 📥 Clone
         uses: actions/checkout@v4
 
-      - name: ⚙️ QEMU Setup
+      - name: ⚙️ QEMU
         uses: docker/setup-qemu-action@v3
 
-      - name: 🔧 Buildx Setup
+      - name: 🛠️ Buildx
         uses: docker/setup-buildx-action@v3
         with:
           driver: docker-container
           name: builder-${{ github.run_id }}
-          buildkitd-flags: --allow-insecure-entitlement security.insecure
           install: true
           use: true
-  
-      - name: 🔐 Docker Login
-        if: github.event_name != 'pull_request'
+
+      - name: 🔐 Login
         uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🏷️ Docker Meta
+      - name: 🏷️ Metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw, value=latest, enable={{is_default_branch}}
-            type=semver, pattern={{version}}
-            type=ref, event=branch
-            type=ref, event=tag
-            type=ref, event=pr
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=ref,event=branch
+            type=ref,event=tag
+            type=ref,event=pr
 
       - name: 🚀 Build & Push
-        id: build-and-push
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
