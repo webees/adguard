@@ -1,4 +1,4 @@
-FROM adguard/adguardhome:v0.108.0-b.71
+FROM adguard/adguardhome:edge
 
 # 53     : TCP, UDP : DNS
 # 67     :      UDP : DHCP (server)
@@ -17,10 +17,16 @@ EXPOSE 53/tcp 53/udp \
        5443/tcp 5443/udp \
        6060/tcp
 
-WORKDIR /
+# 🧱 Define target architecture (e.g., amd64, arm64)
+ARG TARGETARCH
+# 📁 Set working directory path
+ENV WORKDIR /app
+# 📂 Switch to working directory
+WORKDIR $WORKDIR
 
-ARG SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.2.29/supercronic-linux-amd64 \
-    OVERMIND_URL=https://github.com/DarthSim/overmind/releases/download/v2.4.0/overmind-v2.4.0-linux-amd64.gz
+# 🌍 Download URLs for tools
+ARG SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.2.37/supercronic-linux-${TARGETARCH}
+ARG OVERMIND_URL=https://github.com/DarthSim/overmind/releases/download/v2.5.1/overmind-v2.5.1-linux-${TARGETARCH}.gz
 
 ENV TZ="Asia/Shanghai" \
 
